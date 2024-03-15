@@ -30,9 +30,12 @@ public class Intake extends SubsystemBase {
   private final WPI_TalonSRX grabberMotor = new WPI_TalonSRX(Constants.INTAKE_GRABBER_MOTOR_CAN_ID);
   private final DigitalInput noteLimitSwitch = new DigitalInput(Constants.NOTE_LIMIT_SWITCH);
   private final Timer injectTimer = new Timer();
+  private final Timer ejectTimer = new Timer();
 
-  private boolean hasTimerStarted = false;
-  private boolean hasNotePresent = false;
+  private boolean wasNotePresent = false;
+  private boolean isEjectTimerStarted = false;
+  private boolean isInjectTimerStarted = false;
+  private boolean wasNoteRecentlyInjected = false;
 
   /** Creates a new Intake. */
   public Intake() {
@@ -110,11 +113,6 @@ public class Intake extends SubsystemBase {
   }
 
   public void inject() {
-    if (!hasTimerStarted) {
-      hasTimerStarted = true;
-      injectTimer.reset();
-      injectTimer.start();
-    }
     grabberMotor.set(ControlMode.PercentOutput, 0.75);
   }
 
@@ -124,6 +122,10 @@ public class Intake extends SubsystemBase {
 
   public void stopIntake() {
     grabberMotor.set(ControlMode.PercentOutput, 0.0);
+    isEjectTimerStarted = false;
+    isInjectTimerStarted = false;
+    ejectTimer.stop();
+    injectTimer.stop();
   }
 
   public ArmPosition getArmPosition() {
@@ -138,18 +140,41 @@ public class Intake extends SubsystemBase {
   }
 
   public boolean isNotePresent() {
-    return isNotePresentWithDelay()
+    return !noteLimitSwitch.get();
   }
 
-  private boolean isNotePresentWithDelay() {
-    if (!noteLimitSwitch.get() || hasNotePresent){
-      hasNotePresent = true;
-      if (hasTimerStarted && intakeTimer.hasElapsed(0.2)) {
-        hasNotePresent = false;
-        hasTimerStarted = false;
-        intakeTimer.stop();
-      } 
+  public boolean isNoteEjectedWithDelay() {
+    if (wasNotePresent && isEjectTimerStarted && ejectTimer.hasElapsed(2.0)) {
+      wasNotePresent = false;
+      isEjectTimerStarted = false;
+      ejectTimer.stop();
     }
-    return hasNotePresent;
+
+    if (this.isNotePresent()) {
+      wasNotePresent = true;
+    } else if (wasNotePresent && !isEjectTimerStarted) {
+      isEjectTimerStarted = true;
+      ejectTimer.reset();
+      ejectTimer.start();
+    }
+
+    return wasNotePresent;
+  }
+
+  private boolean isNoteInjectedWithDelay() {
+    if (wasNoteRecentlyInjected && isInjectTimerStarted && injectTimer.hasElapsed(0.5)) {
+      wasNoteRecentlyInjected = false;
+      isInjectTimerStarted = false;
+      ejectTimer.stop();
+    }
+
+    if (this.isNotePresent()) {
+      wasNoteRecentlyInjected = true;
+    } else if (wasNoteRecentlyInjected && !isInjectTimerStarted) {
+      isInjectTimerStarted = true;
+      injectTimer.reset();
+      injectTimer.start();
+    }
+    return wasNoteRecentlyInjected;
   }
 }
