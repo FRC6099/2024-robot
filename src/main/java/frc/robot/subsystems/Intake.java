@@ -13,6 +13,7 @@ import com.revrobotics.CANSparkBase.ControlType;
 import com.revrobotics.CANSparkLowLevel.MotorType;
 import com.revrobotics.SparkRelativeEncoder.Type;
 
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -28,6 +29,10 @@ public class Intake extends SubsystemBase {
   private final RelativeEncoder armEncoder = armMotor.getEncoder(Type.kQuadrature, 2048);
   private final WPI_TalonSRX grabberMotor = new WPI_TalonSRX(Constants.INTAKE_GRABBER_MOTOR_CAN_ID);
   private final DigitalInput noteLimitSwitch = new DigitalInput(Constants.NOTE_LIMIT_SWITCH);
+  private final Timer injectTimer = new Timer();
+
+  private boolean hasTimerStarted = false;
+  private boolean hasNotePresent = false;
 
   /** Creates a new Intake. */
   public Intake() {
@@ -105,6 +110,11 @@ public class Intake extends SubsystemBase {
   }
 
   public void inject() {
+    if (!hasTimerStarted) {
+      hasTimerStarted = true;
+      injectTimer.reset();
+      injectTimer.start();
+    }
     grabberMotor.set(ControlMode.PercentOutput, 0.75);
   }
 
@@ -128,6 +138,18 @@ public class Intake extends SubsystemBase {
   }
 
   public boolean isNotePresent() {
-    return !noteLimitSwitch.get();
+    return isNotePresentWithDelay()
+  }
+
+  private boolean isNotePresentWithDelay() {
+    if (!noteLimitSwitch.get() || hasNotePresent){
+      hasNotePresent = true;
+      if (hasTimerStarted && intakeTimer.hasElapsed(0.2)) {
+        hasNotePresent = false;
+        hasTimerStarted = false;
+        intakeTimer.stop();
+      } 
+    }
+    return hasNotePresent;
   }
 }
