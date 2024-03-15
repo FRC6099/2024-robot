@@ -35,7 +35,7 @@ public class Intake extends SubsystemBase {
   private boolean wasNotePresent = false;
   private boolean isEjectTimerStarted = false;
   private boolean isInjectTimerStarted = false;
-  private boolean wasNoteRecentlyInjected = false;
+  private boolean wasNoteNotPresent = true;
 
   /** Creates a new Intake. */
   public Intake() {
@@ -143,7 +143,7 @@ public class Intake extends SubsystemBase {
     return !noteLimitSwitch.get();
   }
 
-  public boolean isNoteEjectedWithDelay() {
+  public boolean wasNotePresent() {
     if (wasNotePresent && isEjectTimerStarted && ejectTimer.hasElapsed(2.0)) {
       wasNotePresent = false;
       isEjectTimerStarted = false;
@@ -161,20 +161,20 @@ public class Intake extends SubsystemBase {
     return wasNotePresent;
   }
 
-  private boolean isNoteInjectedWithDelay() {
-    if (wasNoteRecentlyInjected && isInjectTimerStarted && injectTimer.hasElapsed(0.5)) {
-      wasNoteRecentlyInjected = false;
+  public boolean wasNoteNotPresent() {
+    if (!wasNoteNotPresent && isInjectTimerStarted && injectTimer.hasElapsed(0.5)) {
+      wasNoteNotPresent = true;
       isInjectTimerStarted = false;
       ejectTimer.stop();
     }
 
     if (this.isNotePresent()) {
-      wasNoteRecentlyInjected = true;
-    } else if (wasNoteRecentlyInjected && !isInjectTimerStarted) {
+      wasNoteNotPresent = false;
+    } else if (wasNoteNotPresent && !isInjectTimerStarted) {
       isInjectTimerStarted = true;
       injectTimer.reset();
       injectTimer.start();
     }
-    return wasNoteRecentlyInjected;
+    return wasNoteNotPresent;
   }
 }

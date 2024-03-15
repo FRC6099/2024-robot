@@ -51,6 +51,6 @@ public class EjectNote extends Command {
   // Returns true when the command should end.
   @Override
   public boolean isFinished() {
-    return !this.intake.isNoteEjectedWithDelay(); // || ArmPosition.HOME != this.intake.getArmPosition();
+    return !this.intake.wasNotePresent(); // || ArmPosition.HOME != this.intake.getArmPosition();
   }
 }
